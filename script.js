@@ -1,476 +1,845 @@
 
-/* =========================================================
-   OBSCURA.MA — SUPABASE INTEGRATION
-   ========================================================= */
-
-/* 01 — ELEMENTS */
-
-const menuToggle = document.querySelector(".menu-toggle");
-const navLinks = document.querySelector(".nav-links");
-const cameraGrid = document.querySelector("#camera-grid");
-
-const brandButtons = document.querySelectorAll(".filter-button");
-const priceFilter = document.querySelector("#price-filter");
-const aestheticFilter = document.querySelector("#aesthetic-filter");
-const sortCameras = document.querySelector("#sort-cameras");
-const loadMoreButton = document.querySelector(".load-more");
-
-const instagramUsername = "obscura.digicams";
+// ==========================================
+// OBSCURA ADMIN — CAMERA MANAGEMENT
+// ==========================================
 
 let cameras = [];
-let currentBrand = "all";
-let currentPrice = "all";
-let currentAesthetic = "all";
+let selectedImageFiles = [];
+let existingCameraImages = [];
+let eventsInitialized = false;
 
-/* 02 — MOBILE MENU */
+const $ = (id) => document.getElementById(id);
 
-if (menuToggle && navLinks) {
-    menuToggle.addEventListener("click", () => {
-        navLinks.classList.toggle("mobile-open");
 
-        menuToggle.textContent =
-            navLinks.classList.contains("mobile-open") ? "✕" : "☰";
-    });
+// ==========================================
+// IMAGE PREVIEWS
+// ==========================================
 
-    document.querySelectorAll(".nav-links a").forEach(link => {
-        link.addEventListener("click", () => {
-            navLinks.classList.remove("mobile-open");
-            menuToggle.textContent = "☰";
+
+function renderImagePreviews() {
+    const preview = $("image-preview");
+
+    if (!preview) {
+        console.error("Image preview element not found.");
+        return;
+    }
+
+    preview.replaceChildren();
+
+    // Existing photos from Supabase
+    existingCameraImages.forEach((photo, index) => {
+        const item = document.createElement("div");
+        item.className = "image-preview-item";
+
+        const image = document.createElement("img");
+        image.src = photo.image_url;
+        image.alt = "Camera photo";
+
+        image.onerror = () => {
+            image.alt = "Image could not load";
+            image.classList.add("image-error");
+        };
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "×";
+        remove.className = "remove-image-button";
+        remove.title = "Remove this photo";
+
+        remove.addEventListener("click", () => {
+            removeExistingCameraImage(photo.id);
         });
+
+        item.append(image, remove);
+        preview.appendChild(item);
+    });
+
+    // Newly selected photos
+    selectedImageFiles.forEach((file, index) => {
+        const item = document.createElement("div");
+        item.className = "image-preview-item";
+
+        const image = document.createElement("img");
+        const imageUrl = URL.createObjectURL(file);
+
+        image.src = imageUrl;
+        image.alt = file.name;
+        image.onload = () => URL.revokeObjectURL(imageUrl);
+        image.onerror = () => URL.revokeObjectURL(imageUrl);
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "×";
+        remove.className = "remove-image-button";
+        remove.title = "Remove selected photo";
+
+        remove.addEventListener("click", () => {
+            selectedImageFiles.splice(index, 1);
+            renderImagePreviews();
+        });
+
+        item.append(image, remove);
+        preview.appendChild(item);
     });
 }
 
-/* 03 — SAFE HTML */
+// ==========================================
+// NOTIFICATIONS
+// ==========================================
 
-function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-    })[char]);
+function notify(message, type = "success") {
+    const notification = $("notification");
+
+    if (!notification) {
+        console.log(message);
+        return;
+    }
+
+    notification.textContent = message;
+    notification.className = `notification show ${type}`;
+
+    setTimeout(() => {
+        notification.className = "notification";
+    }, 3000);
 }
 
-/* 04 — LOAD CAMERAS FROM SUPABASE */
+
+// ==========================================
+// LOAD CAMERAS
+// ==========================================
 
 async function loadCameras() {
-    if (!cameraGrid) return;
-
-    cameraGrid.innerHTML =
-        '<p class="camera-loading">Loading cameras...</p>';
-
     const { data, error } = await supabaseClient
         .from("cameras")
-        .select(`
-            *,
-            camera_images (
-                id,
-                image_url,
-                sort_order
-            )
-        `);
+        .select("*")
+        .order("created_at", { ascending: false });
 
     if (error) {
         console.error("Camera loading error:", error);
-        cameraGrid.innerHTML =
-            '<p class="camera-error">Unable to load cameras. Please try again later.</p>';
+        notify("Could not load cameras.", "error");
         return;
     }
 
-    cameras = (data || [])
-        .filter(camera => camera.status === "available")
-        .map(camera => ({
-            ...camera,
-            camera_images: (camera.camera_images || [])
-                .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-        }));
+    cameras = data || [];
 
-    renderCameras();
-    applyFilters();
+    updateDashboardStats();
+    renderCameraTables();
+}
 
-    console.log("OBSCURA CAMERAS LOADED:", cameras);
 
-    if (loadMoreButton) {
-        loadMoreButton.hidden = true;
+// ==========================================
+// DASHBOARD STATISTICS
+// ==========================================
+
+function updateDashboardStats() {
+    if ($("total-cameras")) {
+        $("total-cameras").textContent = cameras.length;
+    }
+
+    if ($("available-cameras")) {
+        $("available-cameras").textContent =
+            cameras.filter(c => c.status === "available").length;
+    }
+
+    if ($("reserved-cameras")) {
+        $("reserved-cameras").textContent =
+            cameras.filter(c => c.status === "reserved").length;
+    }
+
+    if ($("sold-cameras")) {
+        $("sold-cameras").textContent =
+            cameras.filter(c => c.status === "sold").length;
     }
 }
 
-/* 05 — CREATE CAMERA CARDS */
 
-function renderCameras() {
-    if (!cameraGrid) return;
+// ==========================================
+// CAMERA TABLES
+// ==========================================
+
+function createCameraRow(camera) {
+    const row = document.createElement("tr");
+
+    const nameCell = document.createElement("td");
+    const nameStrong = document.createElement("strong");
+
+    nameStrong.textContent = camera.name || "Unnamed camera";
+    nameCell.appendChild(nameStrong);
+
+    const brandCell = document.createElement("td");
+    brandCell.textContent = camera.brand || "-";
+
+    const priceCell = document.createElement("td");
+    priceCell.textContent =
+        `${Number(camera.price).toLocaleString()} DH`;
+
+    const statusCell = document.createElement("td");
+    const statusBadge = document.createElement("span");
+
+    statusBadge.className = `status-badge ${camera.status}`;
+    statusBadge.textContent = camera.status;
+
+    statusCell.appendChild(statusBadge);
+
+    const actionsCell = document.createElement("td");
+
+    const editButton = document.createElement("button");
+    editButton.className = "table-action edit-action";
+    editButton.textContent = "Edit";
+
+    editButton.addEventListener("click", () => {
+        openEditModal(camera.id);
+    });
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "table-action delete-action";
+    deleteButton.textContent = "Delete";
+
+    deleteButton.addEventListener("click", () => {
+        deleteCamera(camera.id);
+    });
+
+    actionsCell.append(editButton, deleteButton);
+
+    row.append(
+        nameCell,
+        brandCell,
+        priceCell,
+        statusCell,
+        actionsCell
+    );
+
+    return row;
+}
+
+
+function renderCameraTables() {
+    const recentBody = $("camera-table-body");
+    const inventoryBody = $("camera-inventory-body");
+
+    if (!recentBody || !inventoryBody) return;
+
+    recentBody.replaceChildren();
+    inventoryBody.replaceChildren();
+
+    const search = $("camera-search")?.value.toLowerCase() || "";
+    const statusFilter = $("camera-status-filter")?.value || "all";
+
+    const filtered = cameras.filter(camera => {
+        const searchableText =
+            `${camera.name} ${camera.brand} ${camera.model || ""}`
+                .toLowerCase();
+
+        const matchesSearch = searchableText.includes(search);
+
+        const matchesStatus =
+            statusFilter === "all" || camera.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+    });
+
+    // Recent five cameras
+    cameras.slice(0, 5).forEach(camera => {
+        recentBody.appendChild(createCameraRow(camera));
+    });
 
     if (cameras.length === 0) {
-        cameraGrid.innerHTML =
-            '<p class="camera-empty">No cameras currently available.</p>';
+        recentBody.innerHTML = `
+            <tr>
+                <td colspan="5">No cameras found. Add your first camera.</td>
+            </tr>
+        `;
+    }
+
+    // Inventory
+    filtered.forEach(camera => {
+        inventoryBody.appendChild(createCameraRow(camera));
+    });
+
+    if (filtered.length === 0) {
+        inventoryBody.innerHTML = `
+            <tr>
+                <td colspan="5">No matching cameras found.</td>
+            </tr>
+        `;
+    }
+
+    if (window.lucide) lucide.createIcons();
+}
+
+
+// ==========================================
+// CAMERA MODAL
+// ==========================================
+
+function resetImageSelection() {
+    selectedImageFiles = [];
+    existingCameraImages = [];
+
+    const input = $("camera-images");
+    if (input) input.value = "";
+
+    const preview = $("image-preview");
+    if (preview) preview.replaceChildren();
+}
+
+
+function openAddModal() {
+    $("camera-form").reset();
+
+    $("camera-id").value = "";
+    $("modal-title").textContent = "Add new camera";
+    $("save-camera-btn").textContent = "Save camera";
+
+    resetImageSelection();
+
+    $("camera-modal").classList.remove("hidden");
+}
+
+
+function closeModal() {
+    $("camera-modal").classList.add("hidden");
+    resetImageSelection();
+}
+
+
+// ==========================================
+// LOAD EXISTING CAMERA PHOTOS
+// ==========================================
+
+async function loadCameraImages(cameraId) {
+    const preview = $("image-preview");
+
+    if (!preview) {
+        console.error("Image preview element not found.");
         return;
     }
 
-    cameraGrid.innerHTML = cameras.map(camera => {
-        const images = camera.camera_images || [];
-        const firstImage = images[0]?.image_url;
+    existingCameraImages = [];
+    renderImagePreviews();
 
-        const name = escapeHTML(camera.name);
-        const brand = escapeHTML(camera.brand);
-        const price = Number(camera.price) || 0;
+    const { data, error } = await supabaseClient
+        .from("camera_images")
+        .select("*")
+        .eq("camera_id", cameraId)
+        .order("sort_order", { ascending: true });
 
-        const aesthetics = Array.isArray(camera.aesthetic)
-            ? camera.aesthetic.join(" ")
-            : "";
+    if (error) {
+        console.error("Image loading error:", error);
+        notify("Could not load camera photos.", "error");
+        return;
+    }
 
-        const description = escapeHTML(
-            camera.description || camera.model || "Digital camera"
+    existingCameraImages = data || [];
+    renderImagePreviews();
+}
+
+
+// ==========================================
+// EDIT CAMERA
+// ==========================================
+
+async function openEditModal(id) {
+    const camera = cameras.find(c => c.id === id);
+
+    if (!camera) return;
+
+    $("camera-form").reset();
+    resetImageSelection();
+
+    $("camera-id").value = camera.id;
+    $("camera-name").value = camera.name || "";
+    $("camera-brand").value = camera.brand || "";
+    $("camera-model").value = camera.model || "";
+    $("camera-price").value = camera.price ?? "";
+    $("camera-condition").value = camera.condition || "Used";
+    $("camera-status").value = camera.status || "available";
+    $("camera-description").value = camera.description || "";
+
+    $("modal-title").textContent = "Edit camera";
+    $("save-camera-btn").textContent = "Update camera";
+
+    $("camera-modal").classList.remove("hidden");
+
+    await loadCameraImages(id);
+}
+
+
+// ==========================================
+// SAVE CAMERA
+// ==========================================
+
+async function saveCamera(event) {
+    event.preventDefault();
+
+    const id = $("camera-id").value;
+
+    const cameraData = {
+        name: $("camera-name").value.trim(),
+        brand: $("camera-brand").value.trim(),
+        model: $("camera-model").value.trim(),
+        price: Number($("camera-price").value),
+        condition: $("camera-condition").value,
+        status: $("camera-status").value,
+        description: $("camera-description").value.trim(),
+        updated_at: new Date().toISOString()
+    };
+
+    if (
+        !cameraData.name ||
+        !cameraData.brand ||
+        !Number.isFinite(cameraData.price) ||
+        cameraData.price < 0
+    ) {
+        notify("Please check the camera details.", "error");
+        return;
+    }
+
+    const saveButton = $("save-camera-btn");
+
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving...";
+
+    try {
+        let cameraId = id;
+
+        // 1. Create or update camera
+        if (id) {
+            const { error } = await supabaseClient
+                .from("cameras")
+                .update(cameraData)
+                .eq("id", id);
+
+            if (error) throw error;
+
+        } else {
+            const { data, error } = await supabaseClient
+                .from("cameras")
+                .insert([cameraData])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            cameraId = data.id;
+        }
+
+        // 2. Upload selected photos
+        for (const file of selectedImageFiles) {
+            const extension =
+                file.name.split(".").pop().toLowerCase();
+
+            const filePath =
+                `${cameraId}/${crypto.randomUUID()}.${extension}`;
+
+            const { error: uploadError } = await supabaseClient
+                .storage
+                .from("camera-images")
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            // 3. Get public URL
+            const { data: urlData } = supabaseClient
+                .storage
+                .from("camera-images")
+                .getPublicUrl(filePath);
+
+            // 4. Save photo URL in database
+            const { error: imageError } = await supabaseClient
+                .from("camera_images")
+                .insert([{
+                    camera_id: cameraId,
+                    image_url: urlData.publicUrl
+                }]);
+
+            if (imageError) throw imageError;
+        }
+
+        // 5. Cleanup
+        resetImageSelection();
+
+        closeModal();
+
+        await loadCameras();
+
+        notify("Camera and photos saved successfully.");
+
+    } catch (error) {
+        console.error("Camera save/upload error:", error);
+
+        notify(
+            error.message || "Could not save camera or photos.",
+            "error"
         );
 
-        const mainImage = firstImage
-            ? `<img class="gallery-main" src="${escapeHTML(firstImage)}" alt="${name}" loading="lazy">`
-            : `<div class="image-placeholder">CAMERA IMAGE</div>`;
-
-        const thumbnails = images.length > 1
-            ? `
-                <div class="gallery-thumbnails">
-                    ${images.map((image, index) => `
-                        <button
-                            type="button"
-                            class="gallery-thumb ${index === 0 ? "active" : ""}"
-                            data-image="${escapeHTML(image.image_url)}"
-                            aria-label="View photo ${index + 1}"
-                        >
-                            <img src="${escapeHTML(image.image_url)}" alt="" loading="lazy">
-                        </button>
-                    `).join("")}
-                </div>
-            `
-            : "";
-
-        return `
-            <article
-                class="camera-card"
-                data-brand="${escapeHTML(String(camera.brand || "").toLowerCase())}"
-                data-price="${price}"
-                data-aesthetic="${escapeHTML(aesthetics.toLowerCase())}"
-                data-camera-id="${escapeHTML(camera.id)}"
-                data-created="${escapeHTML(camera.created_at || "")}"
-                data-sort="${Number(camera.sort_order) || 0}"
-            >
-                <div class="camera-image">
-
-                    <span class="camera-tag">
-                        AVAILABLE
-                    </span>
-
-                    ${mainImage}
-                    ${thumbnails}
-
-                </div>
-
-                <div class="camera-info">
-
-                    <div class="camera-brand">
-                        ${brand.toUpperCase()}
-                    </div>
-
-                    <h3>${name}</h3>
-
-                    <p>${description}</p>
-
-                    <div class="camera-bottom">
-
-                        <strong>${price.toLocaleString("en-US")} DH</strong>
-
-                        <button
-                            class="dm-camera"
-                            data-camera="${name}"
-                            type="button"
-                        >
-                            DM TO ORDER ↗
-                        </button>
-
-                    </div>
-
-                </div>
-            </article>
-        `;
-    }).join("");
-
-    initializeCardAnimations();
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = id ? "Update camera" : "Save camera";
+    }
 }
 
-/* 06 — FILTERS */
 
-brandButtons.forEach(button => {
-    button.addEventListener("click", () => {
-        brandButtons.forEach(btn => btn.classList.remove("active"));
-        button.classList.add("active");
+// ==========================================
+// CUSTOM DELETE CONFIRMATION
+// ==========================================
 
-        currentBrand = button.dataset.filter;
-        applyFilters();
-    });
-});
+function showDeleteConfirmation(cameraName) {
+    return new Promise(resolve => {
+        const modal = $("delete-confirm-modal");
+        const message = $("delete-confirm-message");
+        const confirmButton = $("confirm-delete");
+        const cancelButton = $("cancel-delete");
 
-if (priceFilter) {
-    priceFilter.addEventListener("change", () => {
-        currentPrice = priceFilter.value;
-        applyFilters();
-    });
-}
-
-if (aestheticFilter) {
-    aestheticFilter.addEventListener("change", () => {
-        currentAesthetic = aestheticFilter.value;
-        applyFilters();
-    });
-}
-
-function applyFilters() {
-    document.querySelectorAll(".camera-card").forEach(card => {
-        const brand = card.dataset.brand;
-        const price = Number(card.dataset.price);
-
-        const aesthetics = card.dataset.aesthetic
-            .toLowerCase()
-            .split(/\s+/);
-
-        const brandMatch =
-            currentBrand === "all" || brand === currentBrand;
-
-        let priceMatch = true;
-
-        if (currentPrice === "500") {
-            priceMatch = price < 500;
-        } else if (currentPrice === "750") {
-            priceMatch = price >= 500 && price <= 750;
-        } else if (currentPrice === "1000") {
-            priceMatch = price > 750 && price <= 1000;
-        } else if (currentPrice === "1500") {
-            priceMatch = price > 1000 && price <= 1500;
-        } else if (currentPrice === "1500plus") {
-            priceMatch = price > 1500;
-        }
-
-        const aestheticMatch =
-            currentAesthetic === "all" ||
-            aesthetics.includes(currentAesthetic);
-
-        card.style.display =
-            brandMatch && priceMatch && aestheticMatch ? "" : "none";
-    });
-}
-
-/* 07 — SORTING */
-
-if (sortCameras) {
-    sortCameras.addEventListener("change", () => {
-        const sort = sortCameras.value;
-
-        const sorted = [...cameras];
-
-        if (sort === "low") {
-            sorted.sort((a, b) => Number(a.price) - Number(b.price));
-        } else if (sort === "high") {
-            sorted.sort((a, b) => Number(b.price) - Number(a.price));
-        } else if (sort === "newest") {
-            sorted.sort((a, b) =>
-                new Date(b.created_at || 0) - new Date(a.created_at || 0)
-            );
-        } else {
-            sorted.sort((a, b) =>
-                (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0)
-            );
-        }
-
-        const previousCameras = cameras;
-        cameras = sorted;
-        renderCameras();
-        applyFilters();
-        cameras = previousCameras;
-    });
-}
-
-/* 08 — INSTAGRAM DM SYSTEM */
-
-function showMessageCopied(cameraName) {
-    document.querySelector(".dm-notification")?.remove();
-
-    const notification = document.createElement("div");
-    notification.className = "dm-notification";
-
-    const title = document.createElement("div");
-    title.className = "dm-notification-title";
-    title.textContent = "MESSAGE READY ✓";
-
-    const message = document.createElement("div");
-    message.className = "dm-notification-text";
-    message.textContent = `Your message for ${cameraName} has been copied.`;
-
-    const small = document.createElement("div");
-    small.className = "dm-notification-small";
-    small.textContent = "Paste it in the Obscura Instagram chat.";
-
-    notification.append(title, message, small);
-    document.body.appendChild(notification);
-
-    requestAnimationFrame(() => notification.classList.add("show"));
-
-    setTimeout(() => {
-        notification.classList.remove("show");
-        setTimeout(() => notification.remove(), 300);
-    }, 4000);
-}
-
-/* 09 — CAMERA GRID INTERACTIONS */
-
-if (cameraGrid) {
-    cameraGrid.addEventListener("click", async event => {
-
-        /* Gallery thumbnail */
-
-        const thumbnail = event.target.closest(".gallery-thumb");
-
-        if (thumbnail) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            const card = thumbnail.closest(".camera-card");
-            const mainImage = card?.querySelector(".gallery-main");
-
-            if (mainImage) {
-                mainImage.src = thumbnail.dataset.image;
-
-                card.querySelectorAll(".gallery-thumb")
-                    .forEach(thumb => thumb.classList.remove("active"));
-
-                thumbnail.classList.add("active");
-            }
-
+        if (!modal || !confirmButton || !cancelButton) {
+            resolve(false);
             return;
         }
 
-        /* Instagram DM */
+        message.textContent =
+            `Are you sure you want to delete "${cameraName}"?`;
 
-        const dmButton = event.target.closest(".dm-camera");
+        modal.classList.remove("hidden");
 
-        if (dmButton) {
-            event.preventDefault();
-            event.stopPropagation();
+        function cleanup(result) {
+            modal.classList.add("hidden");
 
-            const cameraName = dmButton.dataset.camera;
+            confirmButton.removeEventListener("click", confirm);
+            cancelButton.removeEventListener("click", cancel);
 
-            const message =
-                `Hi Obscura! 👋 I'm interested in the ${cameraName}. Is it still available? 📸`;
-
-            try {
-                await navigator.clipboard.writeText(message);
-            } catch (error) {
-                console.warn("Clipboard access unavailable.", error);
-            }
-
-            window.open(
-                `https://www.instagram.com/${instagramUsername}/`,
-                "_blank",
-                "noopener,noreferrer"
-            );
-
-            showMessageCopied(cameraName);
-            return;
+            resolve(result);
         }
 
-        /* Product detail page */
-
-        const card = event.target.closest(".camera-card");
-
-        if (card?.dataset.cameraId) {
-            window.location.href =
-                `camera.html?id=${encodeURIComponent(card.dataset.cameraId)}`;
+        function confirm() {
+            cleanup(true);
         }
+
+        function cancel() {
+            cleanup(false);
+        }
+
+        confirmButton.addEventListener("click", confirm);
+        cancelButton.addEventListener("click", cancel);
     });
-
-    cameraGrid.addEventListener("mouseenter", event => {
-        const card = event.target.closest(".camera-card");
-        if (card) card.style.zIndex = "2";
-    }, true);
-
-    cameraGrid.addEventListener("mouseleave", event => {
-        const card = event.target.closest(".camera-card");
-        if (card) card.style.zIndex = "1";
-    }, true);
 }
 
-/* 10 — CARD ANIMATIONS */
+// ==========================================
+// DELETE CAMERA
+// ==========================================
+async function deleteCamera(id) {
+    const camera = cameras.find(c => c.id === id);
 
-function initializeCardAnimations() {
-    const cards = cameraGrid.querySelectorAll(".camera-card");
+    if (!camera) return;
 
-    if (!("IntersectionObserver" in window)) {
-        cards.forEach(card => card.classList.add("revealed"));
+    const confirmed = await showDeleteConfirmation(camera.name);
+
+    if (!confirmed) return;
+
+    const { error } = await supabaseClient
+        .from("cameras")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        console.error("Delete error:", error);
+        notify("Could not delete camera.", "error");
         return;
     }
 
-    const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add("revealed");
-                observer.unobserve(entry.target);
+    await loadCameras();
+
+    notify("Camera deleted successfully.");
+}
+// ==========================================
+// SIDEBAR NAVIGATION
+// ==========================================
+
+function setupNavigation() {
+    document.querySelectorAll(".nav-link").forEach(link => {
+        link.addEventListener("click", event => {
+            event.preventDefault();
+
+            const page = link.dataset.page;
+
+            document.querySelectorAll(".nav-link").forEach(item => {
+                item.classList.remove("active");
+            });
+
+            link.classList.add("active");
+
+            document.querySelectorAll(".page-section").forEach(section => {
+                section.classList.add("hidden");
+            });
+
+            const target = $(`${page}-page`);
+
+            if (target) target.classList.remove("hidden");
+
+            if ($("page-title")) {
+                $("page-title").textContent =
+                    page.charAt(0).toUpperCase() + page.slice(1);
+            }
+
+            if ($("breadcrumb")) {
+                $("breadcrumb").textContent =
+                    `Workspace / ${page.charAt(0).toUpperCase() + page.slice(1)}`;
             }
         });
-    }, { threshold: 0.08 });
-
-    cards.forEach(card => {
-        card.classList.add("reveal");
-        observer.observe(card);
     });
 }
 
-/* 11 — SECTION SCROLL REVEAL */
 
-const revealElements = document.querySelectorAll(
-    ".section, .archive-card, .feedback-card"
-);
+// ==========================================
+// INITIALIZE EVENTS
+// ==========================================
 
-if ("IntersectionObserver" in window) {
-    const revealObserver = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add("revealed");
-                revealObserver.unobserve(entry.target);
-            }
+function setupEvents() {
+    if (eventsInitialized) return;
+
+    eventsInitialized = true;
+
+    $("add-camera-btn")?.addEventListener("click", openAddModal);
+
+    $("add-camera-btn-inventory")?.addEventListener("click", openAddModal);
+
+    $("close-camera-modal")?.addEventListener("click", closeModal);
+
+    $("cancel-camera-modal")?.addEventListener("click", closeModal);
+
+    $("camera-form")?.addEventListener("submit", saveCamera);
+
+    $("camera-search")?.addEventListener("input", renderCameraTables);
+
+    $("camera-status-filter")?.addEventListener("change", renderCameraTables);
+
+    $("camera-modal")?.addEventListener("click", event => {
+        if (event.target === $("camera-modal")) {
+            closeModal();
+        }
+    });
+
+    $("logout-button")?.addEventListener("click", logoutAdmin);
+
+    $("login-form")?.addEventListener("submit", handleLogin);
+
+    setupNavigation();
+    setupImageUpload();
+}
+
+
+// ==========================================
+// ADMIN AUTHENTICATION
+// ==========================================
+
+async function verifyAdmin() {
+    const { data, error } = await supabaseClient.rpc("is_obscura_admin");
+
+    if (error || data !== true) {
+        console.error("Admin verification failed:", error);
+
+        await supabaseClient.auth.signOut();
+
+        return false;
+    }
+
+    return true;
+}
+
+
+// ==========================================
+// LOGIN SCREEN
+// ==========================================
+
+function showLogin() {
+    $("login-screen")?.classList.remove("hidden");
+    $("dashboard")?.classList.add("hidden");
+}
+
+
+// ==========================================
+// SHOW DASHBOARD
+// ==========================================
+
+async function showDashboard() {
+    $("login-screen")?.classList.add("hidden");
+    $("dashboard")?.classList.remove("hidden");
+
+    setupEvents();
+
+    await loadCameras();
+
+    if (window.lucide) lucide.createIcons();
+}
+
+
+// ==========================================
+// LOGIN FORM
+// ==========================================
+
+async function handleLogin(event) {
+    event.preventDefault();
+
+    const email = $("login-email").value.trim();
+    const password = $("login-password").value;
+
+    const button = $("login-button");
+    const errorMessage = $("login-error");
+
+    button.disabled = true;
+    button.textContent = "Signing in...";
+    errorMessage.textContent = "";
+
+    try {
+        const { error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
         });
-    }, { threshold: 0.08 });
 
-    revealElements.forEach(element => {
-        element.classList.add("reveal");
-        revealObserver.observe(element);
+        if (error) {
+            throw new Error("Incorrect email or password.");
+        }
+
+        const isAdmin = await verifyAdmin();
+
+        if (!isAdmin) {
+            throw new Error(
+                "This account is not an authorized administrator."
+            );
+        }
+
+        $("login-form").reset();
+
+        await showDashboard();
+
+    } catch (error) {
+        errorMessage.textContent = error.message;
+
+    } finally {
+        button.disabled = false;
+        button.textContent = "Sign in";
+    }
+}
+
+
+// ==========================================
+// LOGOUT
+// ==========================================
+
+async function logoutAdmin() {
+    const { error } = await supabaseClient.auth.signOut();
+
+    if (error) {
+        console.error("Logout error:", error);
+        notify("Could not sign out.", "error");
+        return;
+    }
+
+    cameras = [];
+    resetImageSelection();
+
+    showLogin();
+}
+
+
+// ==========================================
+// START APPLICATION
+// ==========================================
+
+document.addEventListener("DOMContentLoaded", async () => {
+    showLogin();
+
+    setupEvents();
+
+    try {
+        const { data, error } =
+            await supabaseClient.auth.getSession();
+
+        if (error) throw error;
+
+        if (data.session) {
+            const isAdmin = await verifyAdmin();
+
+            if (isAdmin) {
+                await showDashboard();
+            }
+        }
+
+    } catch (error) {
+        console.error("Application initialization error:", error);
+        showLogin();
+    }
+
+    if (window.lucide) lucide.createIcons();
+});
+
+
+function setupImageUpload() {
+    const input = document.getElementById("camera-images");
+
+    if (!input) {
+        console.error("camera-images input not found");
+        return;
+    }
+
+    input.addEventListener("change", () => {
+        selectedImageFiles = Array.from(input.files);
+        renderImagePreviews();
     });
 }
 
-/* 12 — ACTIVE NAVIGATION */
 
-const sections = document.querySelectorAll("main section[id]");
-const navigationLinks = document.querySelectorAll(".nav-links a");
+async function removeExistingCameraImage(imageId) {
+    const confirmed = confirm("Remove this photo?");
+    if (!confirmed) return;
 
-if ("IntersectionObserver" in window) {
-    const navObserver = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            if (!entry.isIntersecting) return;
+    // Find the photo before deleting its database record
+    const photo = existingCameraImages.find(item => item.id === imageId);
+    if (!photo) return;
 
-            navigationLinks.forEach(link =>
-                link.classList.remove("current")
-            );
+    // Extract the file path from its Supabase URL
+    const marker = "/storage/v1/object/public/camera-images/";
+    const markerIndex = photo.image_url.indexOf(marker);
 
-            const activeLink = document.querySelector(
-                `.nav-links a[href="#${entry.target.id}"]`
-            );
+    if (markerIndex === -1) {
+        notify("Could not identify the image file.", "error");
+        return;
+    }
 
-            activeLink?.classList.add("current");
-        });
-    }, { threshold: 0.35 });
+    const filePath = decodeURIComponent(
+        photo.image_url.substring(markerIndex + marker.length)
+    );
 
-    sections.forEach(section => navObserver.observe(section));
+    console.log("Image URL:", photo.image_url);
+console.log("Storage file path:", filePath);
+
+    // Delete the database record
+    const { error: databaseError } = await supabaseClient
+        .from("camera_images")
+        .delete()
+        .eq("id", imageId);
+
+    if (databaseError) {
+        console.error(databaseError);
+        notify("Could not remove photo.", "error");
+        return;
+    }
+
+    // Delete the actual Storage file
+    const { error: storageError } = await supabaseClient
+        .storage
+        .from("camera-images")
+        .remove([filePath]);
+
+    if (storageError) {
+        console.error(storageError);
+        notify("Photo removed from gallery, but storage cleanup failed.", "error");
+    } else {
+        notify("Photo removed successfully.");
+    }
+
+    existingCameraImages = existingCameraImages.filter(
+        item => item.id !== imageId
+    );
+
+    renderImagePreviews();
 }
-
-/* 13 — INITIALIZE */
-
-console.log("OBSCURA.MA — SYSTEM READY 📸");
-
-loadCameras();
