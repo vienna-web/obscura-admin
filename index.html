@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">    <meta name="theme-color" content="#0c0d12">
 
     <title>Obscura Admin</title>
 
@@ -11,14 +11,13 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
-    
+
     <!-- ADMIN LOGIN -->
     <section id="login-screen" class="login-screen">
         <div class="login-card">
@@ -34,6 +33,7 @@
                         type="email"
                         id="login-email"
                         placeholder="Your admin email"
+                        autocomplete="username"
                         required
                     >
                 </div>
@@ -44,6 +44,7 @@
                         type="password"
                         id="login-password"
                         placeholder="Your password"
+                        autocomplete="current-password"
                         required
                     >
                 </div>
@@ -60,512 +61,473 @@
     <!-- DASHBOARD -->
     <div id="dashboard" class="hidden">
 
+        <!-- MOBILE SIDEBAR BACKDROP -->
+        <div
+            class="sidebar-backdrop"
+            id="sidebar-backdrop"
+            aria-hidden="true"
+        ></div>
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="admin-sidebar">
 
-        <div class="brand">
-            <span class="brand-icon">O</span>
+            <div class="brand">
+                <span class="brand-icon">O</span>
 
-            <div>
-                <h2>OBSCURA</h2>
-                <span>ADMIN PANEL</span>
-            </div>
-        </div>
-
-        <nav>
-            <p class="nav-label">WORKSPACE</p>
-
-            <a href="#overview" class="nav-link active" data-page="overview">
-                <i data-lucide="layout-dashboard"></i>
-                Overview
-            </a>
-
-            <a href="#cameras" class="nav-link" data-page="cameras">
-                <i data-lucide="camera"></i>
-                Cameras
-            </a>
-
-            <a href="#orders" class="nav-link" data-page="orders">
-                <i data-lucide="shopping-bag"></i>
-                Orders
-            </a>
-
-            <a href="#media" class="nav-link" data-page="media">
-                <i data-lucide="image"></i>
-                Media
-            </a>
-
-            <p class="nav-label">SYSTEM</p>
-
-            <a href="#settings" class="nav-link" data-page="settings">
-                <i data-lucide="settings"></i>
-                Settings
-            </a>
-        </nav>
-
-
-<div class="sidebar-footer">
-    <div class="admin-avatar">A</div>
-
-    <div class="admin-info">
-        <strong>Administrator</strong>
-        <span>Obscura Store</span>
-    </div>
-
-    <button
-        class="logout-button"
-        id="logout-button"
-        title="Sign out"
-        aria-label="Sign out"
-    >
-        <i data-lucide="log-out"></i>
-    </button>
-</div>
-
-
-    </aside>
-
-
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
-
-        <!-- TOPBAR -->
-        <header class="topbar">
-
-            <div>
-                <span class="breadcrumb" id="breadcrumb">
-                    Workspace / Overview
-                </span>
-
-                <h1 id="page-title">Dashboard</h1>
-            </div>
-
-            <div class="topbar-right">
-                <span class="status-dot"></span>
-                <span>Store connected</span>
-            </div>
-
-        </header>
-
-
-        <!-- OVERVIEW PAGE -->
-        <section class="page-section" id="overview-page">
-
-            <section class="welcome">
                 <div>
-                    <span class="eyebrow">OBSCURA MANAGEMENT</span>
-
-                    <h2>Welcome back.</h2>
-
-                    <p>
-                        Here's what's happening with your store today.
-                    </p>
+                    <h2>OBSCURA</h2>
+                    <span>ADMIN PANEL</span>
                 </div>
+            </div>
 
-                <div class="welcome-mark">O</div>
-            </section>
+            <nav aria-label="Main navigation">
+                <p class="nav-label">WORKSPACE</p>
 
+                <a href="#overview" class="nav-link active" data-page="overview">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Overview</span>
+                </a>
 
-            <!-- STATISTICS -->
-            <section class="stats-grid">
-
-                <div class="stat-card">
-                    <span>Total cameras</span>
+                <a href="#cameras" class="nav-link" data-page="cameras">
                     <i data-lucide="camera"></i>
+                    <span>Cameras</span>
+                </a>
 
-                    <h2 id="total-cameras">--</h2>
-
-                    <small>Across your collection</small>
-                </div>
-
-
-                <div class="stat-card">
-                    <span>Available</span>
-                    <i data-lucide="check-circle"></i>
-
-                    <h2 id="available-cameras">--</h2>
-
-                    <small>Ready for customers</small>
-                </div>
-
-
-                <div class="stat-card">
-                    <span>Reserved</span>
-                    <i data-lucide="clock"></i>
-
-                    <h2 id="reserved-cameras">--</h2>
-
-                    <small>Currently reserved</small>
-                </div>
-
-
-                <div class="stat-card">
-                    <span>Sold</span>
-                    <i data-lucide="package-check"></i>
-
-                    <h2 id="sold-cameras">--</h2>
-
-                    <small>Completed sales</small>
-                </div>
-
-            </section>
-
-
-            <!-- RECENT CAMERAS -->
-            <section class="content-panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Recent cameras</h3>
-
-                        <p>
-                            Your latest additions to the collection.
-                        </p>
-                    </div>
-
-                    <button class="primary-button" id="add-camera-btn">
-                        + Add camera
-                    </button>
-                </div>
-
-                <div class="camera-table-wrapper">
-
-                    <table class="camera-table">
-
-                        <thead>
-                            <tr>
-                                <th>Camera</th>
-                                <th>Brand</th>
-                                <th>Price</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="camera-table-body">
-                            <tr>
-                                <td colspan="5">Loading cameras...</td>
-                            </tr>
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </section>
-
-        </section>
-
-
-        <!-- CAMERAS PAGE -->
-        <section class="page-section hidden" id="cameras-page">
-
-            <section class="content-panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Camera inventory</h3>
-
-                        <p>
-                            Manage your complete camera collection.
-                        </p>
-                    </div>
-
-                    <button class="primary-button" id="add-camera-btn-inventory">
-                        + Add camera
-                    </button>
-                </div>
-
-
-                <div class="camera-toolbar">
-
-                    <input
-                        type="search"
-                        id="camera-search"
-                        placeholder="Search cameras..."
-                    >
-
-                    <select id="camera-status-filter">
-                        <option value="all">All statuses</option>
-                        <option value="available">Available</option>
-                        <option value="reserved">Reserved</option>
-                        <option value="sold">Sold</option>
-                    </select>
-
-                </div>
-
-
-                <div class="camera-table-wrapper">
-
-                    <table class="camera-table">
-
-                        <thead>
-                            <tr>
-                                <th>Camera</th>
-                                <th>Brand</th>
-                                <th>Price</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="camera-inventory-body">
-                            <tr>
-                                <td colspan="5">Loading cameras...</td>
-                            </tr>
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </section>
-
-        </section>
-
-
-        <!-- ORDERS PAGE -->
-        <section class="page-section hidden" id="orders-page">
-
-            <section class="content-panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Orders</h3>
-                        <p>Manage customer orders.</p>
-                    </div>
-
-                </div>
-
-                <div class="empty-state">
+                <a href="#orders" class="nav-link" data-page="orders">
                     <i data-lucide="shopping-bag"></i>
+                    <span>Orders</span>
+                </a>
 
-                    <h3>Order management</h3>
-
-                    <p>
-                        Your customer orders will appear here once we build the ordering system.
-                    </p>
-                </div>
-
-            </section>
-
-        </section>
-
-
-        <!-- MEDIA PAGE -->
-        <section class="page-section hidden" id="media-page">
-
-            <section class="content-panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Media library</h3>
-                        <p>Manage your camera photos.</p>
-                    </div>
-                </div>
-
-                <div class="empty-state">
+                <a href="#media" class="nav-link" data-page="media">
                     <i data-lucide="image"></i>
+                    <span>Media</span>
+                </a>
 
-                    <h3>Media library</h3>
+                <p class="nav-label">SYSTEM</p>
 
-                    <p>
-                        Your uploaded camera photos will be accessible here.
-                    </p>
-                </div>
-
-            </section>
-
-        </section>
-
-
-        <!-- SETTINGS PAGE -->
-        <section class="page-section hidden" id="settings-page">
-
-            <section class="content-panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Settings</h3>
-                        <p>Manage your Obscura store configuration.</p>
-                    </div>
-                </div>
-
-                <div class="empty-state">
+                <a href="#settings" class="nav-link" data-page="settings">
                     <i data-lucide="settings"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
 
-                    <h3>Store settings</h3>
+            <div class="sidebar-footer">
+                <div class="admin-avatar">A</div>
 
-                    <p>
-                        Your store settings will be available here.
-                    </p>
+                <div class="admin-info">
+                    <strong>Administrator</strong>
+                    <span>Obscura Store</span>
                 </div>
 
-            </section>
-
-        </section>
-
-    </main>
-
-
-    <!-- ADD / EDIT CAMERA MODAL -->
-    <div class="modal-overlay hidden" id="camera-modal">
-
-        <div class="modal">
-
-            <div class="modal-header">
-                <div>
-                    <span class="eyebrow">OBSCURA INVENTORY</span>
-                    <h2 id="modal-title">Add new camera</h2>
-                </div>
-
-                <button class="icon-button" id="close-camera-modal" aria-label="Close">
-                    <i data-lucide="x"></i>
+                <button
+                    type="button"
+                    class="logout-button"
+                    id="logout-button"
+                    title="Sign out"
+                    aria-label="Sign out"
+                >
+                    <i data-lucide="log-out"></i>
                 </button>
             </div>
 
+        </aside>
 
-            <form id="camera-form">
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
 
-                <input type="hidden" id="camera-id">
+            <!-- TOPBAR -->
+            <header class="topbar">
 
+                <button
+                    type="button"
+                    class="menu-toggle"
+                    id="menu-toggle"
+                    aria-label="Open navigation menu"
+                    aria-controls="admin-sidebar"
+                    aria-expanded="false"
+                >
+                    ☰
+                </button>
 
-                <div class="form-group">
-                    <label for="camera-name">Camera name</label>
+                <div class="topbar-heading">
+                    <span class="breadcrumb" id="breadcrumb">
+                        Workspace / Overview
+                    </span>
 
-                    <input
-                        type="text"
-                        id="camera-name"
-                        placeholder="Sony Cyber-shot W610"
-                        required
-                    >
+                    <h1 id="page-title">Dashboard</h1>
                 </div>
 
-
-                <div class="form-row">
-
-                    <div class="form-group">
-                        <label for="camera-brand">Brand</label>
-
-                        <input
-                            type="text"
-                            id="camera-brand"
-                            placeholder="Sony"
-                            required
-                        >
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="camera-model">Model</label>
-
-                        <input
-                            type="text"
-                            id="camera-model"
-                            placeholder="W610"
-                        >
-                    </div>
-
+                <div class="topbar-right">
+                    <span class="status-dot"></span>
+                    <span>Store connected</span>
                 </div>
 
+            </header>
 
-                <div class="form-row">
+            <!-- OVERVIEW PAGE -->
+            <section class="page-section" id="overview-page">
 
-                    <div class="form-group">
-                        <label for="camera-price">Price (DH)</label>
-
-                        <input
-                            type="number"
-                            id="camera-price"
-                            min="0"
-                            step="0.01"
-                            placeholder="450"
-                            required
-                        >
+                <section class="welcome">
+                    <div>
+                        <span class="eyebrow">OBSCURA MANAGEMENT</span>
+                        <h2>Welcome back.</h2>
+                        <p>Here's what's happening with your store today.</p>
                     </div>
 
+                    <div class="welcome-mark" aria-hidden="true">O</div>
+                </section>
 
-                    <div class="form-group">
-                        <label for="camera-condition">Condition</label>
+                <!-- STATISTICS -->
+                <section class="stats-grid">
 
-                        <select id="camera-condition">
-                            <option value="Used">Used</option>
-                            <option value="Like new">Like new</option>
-                            <option value="New">New</option>
+                    <div class="stat-card">
+                        <span>Total cameras</span>
+                        <i data-lucide="camera"></i>
+                        <h2 id="total-cameras">--</h2>
+                        <small>Across your collection</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <span>Available</span>
+                        <i data-lucide="check-circle"></i>
+                        <h2 id="available-cameras">--</h2>
+                        <small>Ready for customers</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <span>Reserved</span>
+                        <i data-lucide="clock"></i>
+                        <h2 id="reserved-cameras">--</h2>
+                        <small>Currently reserved</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <span>Sold</span>
+                        <i data-lucide="package-check"></i>
+                        <h2 id="sold-cameras">--</h2>
+                        <small>Completed sales</small>
+                    </div>
+
+                </section>
+
+                <!-- RECENT CAMERAS -->
+                <section class="content-panel">
+
+                    <div class="panel-header">
+                        <div>
+                            <h3>Recent cameras</h3>
+                            <p>Your latest additions to the collection.</p>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="primary-button"
+                            id="add-camera-btn"
+                        >
+                            + Add camera
+                        </button>
+                    </div>
+
+                    <div class="camera-table-wrapper">
+                        <table class="camera-table">
+                            <thead>
+                                <tr>
+                                    <th>Camera</th>
+                                    <th>Brand</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="camera-table-body">
+                                <tr>
+                                    <td colspan="5">Loading cameras...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </section>
+
+            </section>
+
+            <!-- CAMERAS PAGE -->
+            <section class="page-section hidden" id="cameras-page">
+
+                <section class="content-panel">
+
+                    <div class="panel-header">
+                        <div>
+                            <h3>Camera inventory</h3>
+                            <p>Manage your complete camera collection.</p>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="primary-button"
+                            id="add-camera-btn-inventory"
+                        >
+                            + Add camera
+                        </button>
+                    </div>
+
+                    <div class="camera-toolbar">
+                        <input
+                            type="search"
+                            id="camera-search"
+                            placeholder="Search cameras..."
+                            aria-label="Search cameras"
+                        >
+
+                        <select id="camera-status-filter" aria-label="Filter by status">
+                            <option value="all">All statuses</option>
+                            <option value="available">Available</option>
+                            <option value="reserved">Reserved</option>
+                            <option value="sold">Sold</option>
                         </select>
                     </div>
 
-                </div>
+                    <div class="camera-table-wrapper">
+                        <table class="camera-table">
+                            <thead>
+                                <tr>
+                                    <th>Camera</th>
+                                    <th>Brand</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
 
+                            <tbody id="camera-inventory-body">
+                                <tr>
+                                    <td colspan="5">Loading cameras...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                <div class="form-group">
-                    <label for="camera-status">Availability</label>
+                </section>
 
-                    <select id="camera-status">
-                        <option value="available">Available</option>
-                        <option value="reserved">Reserved</option>
-                        <option value="sold">Sold</option>
-                    </select>
-                </div>
+            </section>
 
+            <!-- ORDERS PAGE -->
+            <section class="page-section hidden" id="orders-page">
 
-                <div class="form-group">
-                    <label for="camera-description">Description</label>
+                <section class="content-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Orders</h3>
+                            <p>Manage customer orders.</p>
+                        </div>
+                    </div>
 
-                    <textarea
-                        id="camera-description"
-                        rows="4"
-                        placeholder="Describe the camera..."
-                    ></textarea>
-                </div>
-                
-                
-<div class="form-group">
-    <label for="camera-images">Camera photos</label>
+                    <div class="empty-state">
+                        <i data-lucide="shopping-bag"></i>
+                        <h3>Order management</h3>
+                        <p>Your customer orders will appear here once we build the ordering system.</p>
+                    </div>
+                </section>
 
- <input
-    type="file"
-    id="camera-images"
-    accept="image/*"
-    multiple
-    class="file-input"
->
-<label for="camera-images" class="upload-button">
-    <i data-lucide="image-plus"></i>
-    Choose camera photos
-</label>
-<div id="image-preview" class="image-preview"></div>
-</div>
+            </section>
 
+            <!-- MEDIA PAGE -->
+            <section class="page-section hidden" id="media-page">
 
+                <section class="content-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Media library</h3>
+                            <p>Manage your camera photos.</p>
+                        </div>
+                    </div>
 
-                <div class="form-actions">
+                    <div class="empty-state">
+                        <i data-lucide="image"></i>
+                        <h3>Media library</h3>
+                        <p>Your uploaded camera photos will be accessible here.</p>
+                    </div>
+                </section>
+
+            </section>
+
+            <!-- SETTINGS PAGE -->
+            <section class="page-section hidden" id="settings-page">
+
+                <section class="content-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Settings</h3>
+                            <p>Manage your Obscura store configuration.</p>
+                        </div>
+                    </div>
+
+                    <div class="empty-state">
+                        <i data-lucide="settings"></i>
+                        <h3>Store settings</h3>
+                        <p>Your store settings will be available here.</p>
+                    </div>
+                </section>
+
+            </section>
+
+        </main>
+
+        <!-- ADD / EDIT CAMERA MODAL -->
+        <div class="modal-overlay hidden" id="camera-modal">
+
+            <div
+                class="modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
+            >
+
+                <div class="modal-header">
+                    <div>
+                        <span class="eyebrow">OBSCURA INVENTORY</span>
+                        <h2 id="modal-title">Add new camera</h2>
+                    </div>
 
                     <button
                         type="button"
-                        class="secondary-button"
-                        id="cancel-camera-modal"
+                        class="icon-button"
+                        id="close-camera-modal"
+                        aria-label="Close camera form"
                     >
-                        Cancel
+                        <i data-lucide="x"></i>
                     </button>
-
-                    <button type="submit" class="primary-button" id="save-camera-btn">
-                        Save camera
-                    </button>
-
                 </div>
 
-            </form>
+                <form id="camera-form">
+
+                    <input type="hidden" id="camera-id">
+
+                    <div class="form-group">
+                        <label for="camera-name">Camera name</label>
+                        <input
+                            type="text"
+                            id="camera-name"
+                            placeholder="Sony Cyber-shot W610"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="camera-brand">Brand</label>
+                            <input
+                                type="text"
+                                id="camera-brand"
+                                placeholder="Sony"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="camera-model">Model</label>
+                            <input
+                                type="text"
+                                id="camera-model"
+                                placeholder="W610"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="camera-price">Price (DH)</label>
+                            <input
+                                type="number"
+                                id="camera-price"
+                                min="0"
+                                step="0.01"
+                                placeholder="450"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="camera-condition">Condition</label>
+                            <select id="camera-condition">
+                                <option value="Used">Used</option>
+                                <option value="Like new">Like new</option>
+                                <option value="New">New</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="camera-status">Availability</label>
+                        <select id="camera-status">
+                            <option value="available">Available</option>
+                            <option value="reserved">Reserved</option>
+                            <option value="sold">Sold</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="camera-description">Description</label>
+                        <textarea
+                            id="camera-description"
+                            rows="4"
+                            placeholder="Describe the camera..."
+                        ></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="camera-images">Camera photos</label>
+
+                        <input
+                            type="file"
+                            id="camera-images"
+                            accept="image/*"
+                            multiple
+                            class="file-input"
+                        >
+
+                        <label for="camera-images" class="upload-button">
+                            <i data-lucide="image-plus"></i>
+                            Choose camera photos
+                        </label>
+
+                        <div id="image-preview" class="image-preview"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button
+                            type="button"
+                            class="secondary-button"
+                            id="cancel-camera-modal"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="primary-button"
+                            id="save-camera-btn"
+                        >
+                            Save camera
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
 
         </div>
 
+        <!-- NOTIFICATION -->
+        <div
+            id="notification"
+            class="notification"
+            role="status"
+            aria-live="polite"
+        ></div>
+
     </div>
-
-
-    <!-- NOTIFICATION -->
-    <div id="notification" class="notification"></div>
-
 
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -577,6 +539,57 @@
             lucide.createIcons();
         }
     </script>
-    </div>
+
+    <!-- MOBILE SIDEBAR INTERACTION -->
+    <script>
+        (() => {
+            const menuButton = document.getElementById("menu-toggle");
+            const sidebar = document.getElementById("admin-sidebar");
+            const backdrop = document.getElementById("sidebar-backdrop");
+
+            if (!menuButton || !sidebar || !backdrop) return;
+
+            function closeMenu() {
+                sidebar.classList.remove("mobile-open");
+                backdrop.classList.remove("visible");
+                menuButton.textContent = "☰";
+                menuButton.setAttribute("aria-expanded", "false");
+                menuButton.setAttribute("aria-label", "Open navigation menu");
+                document.body.style.overflow = "";
+            }
+
+            function openMenu() {
+                sidebar.classList.add("mobile-open");
+                backdrop.classList.add("visible");
+                menuButton.textContent = "✕";
+                menuButton.setAttribute("aria-expanded", "true");
+                menuButton.setAttribute("aria-label", "Close navigation menu");
+                document.body.style.overflow = "hidden";
+            }
+
+            menuButton.addEventListener("click", () => {
+                if (sidebar.classList.contains("mobile-open")) {
+                    closeMenu();
+                } else {
+                    openMenu();
+                }
+            });
+
+            backdrop.addEventListener("click", closeMenu);
+
+            sidebar.querySelectorAll(".nav-link").forEach(link => {
+                link.addEventListener("click", closeMenu);
+            });
+
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape") closeMenu();
+            });
+
+            window.addEventListener("resize", () => {
+                if (window.innerWidth > 650) closeMenu();
+            });
+        })();
+    </script>
+
 </body>
 </html>
